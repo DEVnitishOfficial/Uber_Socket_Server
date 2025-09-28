@@ -4,6 +4,6 @@ import { NotifyDriversController } from '../controllers/notification.controller.
 const notificationRouter = express.Router();
 
 
-notificationRouter.post('/notify-driver',NotifyDriversController);
+notificationRouter.post('/notify-drivers',NotifyDriversController);
 
 export default notificationRouter

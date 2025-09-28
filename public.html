@@ -112,6 +112,144 @@
                 <p>No active ride notifications</p>
             </div>
         </div>
+        <script src="http://localhost:3009/socket.io/socket.io.js"></script>
+
+        <script>
+
+            let currentDriverId = null
+            let socket = null
+            let currentRideNotifications = new Map();
+
+            function connectToWebSocket(){
+                if(!socket){
+                    socket = io("http://localhost:3009")
+                    setSocketUpEvent()
+                }
+            }
+
+            function setSocketUpEvent(){
+                socket.on('Login-Success', (data) => {
+                    document.getElementById('loginBtn').disabled = true;
+                    document.getElementById('email').disabled = true;
+                    document.getElementById('password').disabled = true;
+                })
+
+                socket.on('New-Ride-Notification',(data) => {
+                    currentRideNotifications.set(data.rideId, data)
+                    displayUpdatedRideNotificationToDriver()
+                })
+
+                socket.on('connect', () => {
+                    updateDriverConnectionStatus(true)
+                })
+
+                socket.on('disconnect', () => {
+                    updateDriverConnectionStatus(false)
+                })
+
+
+            }
+
+            function updateDriverConnectionStatus(connected){
+                const driverStatusDivTag = document.getElementById('connectionStatus');
+                if (connected) {
+                    driverStatusDivTag.textContent = 'Connected to web socket server';
+                    driverStatusDivTag.className = 'status connected';
+                } else {
+                    driverStatusDivTag.textContent = 'Disconnected from server';
+                    driverStatusDivTag.className = 'status disconnected';
+                }
+            }
+
+            function displayUpdatedRideNotificationToDriver(){
+                const container = document.getElementById('rideNotifications');
+                
+                if (currentRideNotifications.size === 0) {
+                    container.innerHTML = '<p>No active ride notifications till so far</p>';
+                    return;
+                }
+                
+                try{
+                    container.innerHTML = '';    
+                    currentRideNotifications.forEach((notification, rideId) => {
+
+                    const rideRequest = document.createElement('div');
+                    rideRequest.className = 'ride-notification';
+                    rideRequest.id = `ride-${rideId}`;
+                    rideRequest.innerHTML = `
+                        <p>Booking ID: ${rideId}</p>
+                        <p>Source: ${notification.rideInfo.source.latitude}, ${notification.rideInfo.source.longitude}</p>
+                        <p>Destination: ${notification.rideInfo.destination.latitude}, ${notification.rideInfo.destination.longitude}</p>
+                        <p>Fare: ${notification.rideInfo.estimatedFare || notification.rideInfo.fare || 'N/A'}</p>
+                        <button onclick="confirmRide('${rideId}')">Confirm Booking</button>
+                    `;
+                    container.appendChild(rideRequest);
+
+                });
+    
+                socket.on('connect', () => {
+                    updateConnectionStatus(true);
+                });
+
+                socket.on('disconnect', () => {
+                    updateConnectionStatus(false);
+                });
+
+                }catch(error){
+                    console.log('something went wrong while shoing notification to driver',error.message)
+                    console.error(error.message)
+                }
+                
+            }
+
+
+            let token = null
+
+            async function login(){
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+
+               try{
+
+                 const response = await fetch('http://localhost:5004/api/v1/user/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ email, password })
+                    });
+
+
+                    if(!response.ok){
+                        throw new Error("Unable to login, either email or password is incorrect")
+                    }
+
+                    const loggedInUserData = await response.json()
+
+
+                    token = loggedInUserData.data.accessToken
+                    const driverName = loggedInUserData.data.user.userName
+
+                    alert(`User ${driverName} logged in successfully.`)
+
+                    currentDriverId = loggedInUserData.data.user._id;
+                    connectToWebSocket()
+
+                    socket.emit('Driver-Login',{
+                        driverId : loggedInUserData.data.user._id,
+                        name : loggedInUserData.data.user.userName || email.split('@')[0]
+                    })
+
+               }catch(error){
+
+                console.log('Login failed',error)
+                alert(`Login failed: ${error.message}`);
+
+               }
+            }
+
+
+        </script>
     </div>
 </body>
 

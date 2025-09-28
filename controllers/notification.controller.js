@@ -18,7 +18,8 @@ export async function NotifyDriversController(req, res){
         for(let driverId of driverIds){
             const socketId = await getDriverSocketIdFromRedis(driverId)
 
-            if(socketId && sockets.sockets.has(socketId)){
+
+            if(socketId && io.sockets.sockets.has(socketId)){
                 io.to(socketId).emit("New-Ride-Notification", notificationData)
                 notifiedDrivers.push(driverId)
             }else{

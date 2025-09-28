@@ -20,7 +20,7 @@ export async function getDriverSocketIdFromRedis(driverId){
     
     try{
 
-        await redisClient.hGet('driver_sockets', driverId)
+       return await redisClient.hGet('driver_sockets', driverId)
 
     }catch(error){
 
