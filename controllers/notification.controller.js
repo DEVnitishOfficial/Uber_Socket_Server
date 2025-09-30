@@ -43,3 +43,47 @@ export async function NotifyDriversController(req, res){
             }
         })
 }
+
+
+export async function ReomveRideUIController(req, res){
+
+
+    const {rideId, driverIds} = req.body;
+
+    if(!rideId || !driverIds || !Array.isArray(driverIds)){
+        throw new Error("Incoming data from backend is not in required format")
+    }
+
+
+    const notifiedDrivers = [];
+    const failedDrivers = [];
+
+    for(const driverId of driverIds){
+        const driverSocketId = await getDriverSocketIdFromRedis(driverId)
+
+    if (driverSocketId && io.sockets.sockets.has(driverSocketId)) {
+          io.to(driverSocketId).emit('Remove-Ride-Notification', rideId);
+          notifiedDrivers.push(driverId);
+        } else {
+          failedDrivers.push(driverId);
+        }
+    }
+
+    console.log(`Ride : ${rideId} Notification removed from driver: ${driverIds} UI`)
+
+    const result = {
+        notifiedDrivers,
+        failedDrivers,
+        totalNotifiedDriver : driverIds.length,
+        removedBookingsCount : notifiedDrivers.length
+    }
+
+    res.status(200).json({
+        success : true,
+        message : "Booking Notification removed from all drivers UI",
+        data : {
+            rideId,
+            ...result
+        }
+    })
+}

@@ -147,7 +147,16 @@
                     updateDriverConnectionStatus(false)
                 })
 
+                socket.on('Remove-Ride-Notification', (rideId) => {
+                    removeRideNotification(rideId)
+                })
 
+
+            }
+
+            function removeRideNotification(rideId) {
+                currentRideNotifications.delete(rideId);
+                displayUpdatedRideNotificationToDriver();
             }
 
             function updateDriverConnectionStatus(connected){
@@ -188,11 +197,11 @@
                 });
     
                 socket.on('connect', () => {
-                    updateConnectionStatus(true);
+                    updateDriverConnectionStatus(true);
                 });
 
                 socket.on('disconnect', () => {
-                    updateConnectionStatus(false);
+                    updateDriverConnectionStatus(false);
                 });
 
                 }catch(error){
@@ -202,6 +211,7 @@
                 
             }
 
+            
 
             let token = null
 
@@ -248,6 +258,38 @@
                }
             }
 
+
+            async function confirmRide(bookingId) {
+                
+                try {
+                    const response = await fetch('http://localhost:5004/api/v1/driver/confirm', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ bookingId })
+                    });
+
+                    if (!response) {
+                        throw new Error(`Something went wrong while making confirm booking`,response.data);
+                    }
+                    
+                    const data = await response.json();
+                    console.log(data);
+
+                    if (!currentDriverId) {
+                        alert('Please login first');
+                        return;
+                    }
+                    
+                    alert(`Booking with ID: ${bookingId} has been confirmed by you.`);
+                    removeRideNotification(bookingId);
+                }catch(error) {
+                    console.error('Error confirming booking:', error);
+                    alert('Failed to confirm booking');
+                }
+            }
 
         </script>
     </div>
